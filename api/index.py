@@ -196,6 +196,18 @@ def build_url(acadyear, semester, coursecode="", coursename=""):
     )
 
 
+def decode_html(content):
+    """
+    SUT Registrar has inconsistent/incorrect charset declarations.
+    Prefer UTF-8 when the raw response is valid UTF-8, then fall back
+    to the Thai Windows-874 encoding used by older pages.
+    """
+    try:
+        return content.decode("utf-8")
+    except UnicodeDecodeError:
+        return content.decode("cp874")
+
+
 def fetch_courses(acadyear, semester, coursecode="", coursename=""):
     url = build_url(acadyear, semester, coursecode, coursename)
 
@@ -206,9 +218,8 @@ def fetch_courses(acadyear, semester, coursecode="", coursename=""):
     )
     response.raise_for_status()
 
-    # SUT Registrar is a legacy Thai web application. Parse the raw
-    # response bytes so BeautifulSoup can detect the page encoding.
-    return parse_courses(response.content)
+    html = decode_html(response.content)
+    return parse_courses(html)
 
 
 @app.get("/api/course")
