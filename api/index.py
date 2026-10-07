@@ -86,7 +86,7 @@ def extract_schedule(td):
         text = clean_text(" ".join(parts))
 
         match = re.search(
-            r"(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})\s+(.+)",
+            r"(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})\s+(.+?)(?=\s+[A-Za-z]{1,3}\s+\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}|$)",
             text,
         )
 
