@@ -145,6 +145,7 @@ def parse_courses(html):
             continue
 
         course_name = clean_text(tds[2].get_text(" ", strip=True))
+        course_name = re.sub(r"\s*\(.*$", "", course_name).strip()
         teachers = extract_teachers(tds[2])
         additional_info = extract_additional_info(tds[2])
 
