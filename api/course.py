@@ -117,15 +117,6 @@ class handler(BaseHTTPRequestHandler):
                 {"success": False, "error": "semester must be numeric"},
             )
 
-        if not coursecode and not coursename:
-            return self.send_json(
-                400,
-                {
-                    "success": False,
-                    "error": "coursecode or coursename is required",
-                },
-            )
-
         try:
             result = fetch_courses(
                 acadyear,
