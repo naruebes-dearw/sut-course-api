@@ -1,0 +1,335 @@
+openapi: 3.0.3
+info:
+  title: SUT Course API
+  version: 0.2.0
+  description: |
+    API for querying structured course information parsed from the SUT Registrar system.
+
+    The API is intended for frontend applications and other clients that need
+    course, instructor, credit, schedule, room, section, capacity, and
+    registration-status information.
+
+servers:
+  - url: https://sut-course-api.vercel.app
+    description: Production
+
+paths:
+  /api/course:
+    get:
+      summary: Search courses
+      description: |
+        Query course information from the SUT Registrar system.
+
+        All query parameters are optional in the current implementation.
+        The response contains the normalized query and an array of parsed
+        course records.
+
+        coursecode preserves the '*' wildcard when constructing the upstream
+        Registrar query. Spaces in coursecode and coursename are converted
+        to '+' for the upstream request.
+      parameters:
+        - name: acadyear
+          in: query
+          required: false
+          description: Academic year. Must contain only digits.
+          schema:
+            type: string
+            default: "2569"
+            pattern: '^\d+$'
+          example: "2569"
+
+        - name: semester
+          in: query
+          required: false
+          description: Semester. Must contain only digits.
+          schema:
+            type: string
+            default: "2"
+            pattern: '^\d+$'
+          example: "2"
+
+        - name: coursecode
+          in: query
+          required: false
+          description: Course-code search text. The '*' wildcard is preserved.
+          schema:
+            type: string
+          example: "ENG39*"
+
+        - name: coursename
+          in: query
+          required: false
+          description: Course-name search text.
+          schema:
+            type: string
+          example: "Computer Programming"
+
+      responses:
+        "200":
+          description: Successful course query.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseResponse'
+              example:
+                success: true
+                query:
+                  acadyear: "2569"
+                  semester: "2"
+                  coursecode: "ENG392001"
+                  coursename: ""
+                data:
+                  - course_code: "ENG39 2001"
+                    version: "1"
+                    course_name: "Example Course"
+                    teachers:
+                      - "Example Teacher"
+                    credits: 3
+                    credit_detail: "3-0-6"
+                    language: "English"
+                    level: "Bachelor"
+                    schedule:
+                      - day: "We"
+                        start_time: "13:00"
+                        end_time: "15:00"
+                        room: "B6503-A"
+                    group: "1"
+                    capacity: "40"
+                    enrolled: "35"
+                    remaining: "5"
+                    status: "O"
+                    additional_info: ""
+
+        "400":
+          description: Invalid academic year or semester.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidAcademicYear:
+                  value:
+                    success: false
+                    error: "acadyear must be numeric"
+                invalidSemester:
+                  value:
+                    success: false
+                    error: "semester must be numeric"
+
+        "500":
+          description: Unexpected internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "Internal server error"
+                detail: "..."
+
+        "502":
+          description: Failed to fetch the SUT Registrar system.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "Failed to fetch SUT registrar"
+                detail: "..."
+
+  /api/health:
+    get:
+      summary: Health check
+      description: Check whether the API service is running.
+      responses:
+        "200":
+          description: API service is running.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - service
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  service:
+                    type: string
+                    example: sut-course-api
+
+components:
+  schemas:
+    CourseResponse:
+      type: object
+      required:
+        - success
+        - query
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        query:
+          $ref: '#/components/schemas/CourseQuery'
+        data:
+          type: array
+          description: Parsed course records. An empty array means no matching courses were returned.
+          items:
+            $ref: '#/components/schemas/Course'
+
+    CourseQuery:
+      type: object
+      required:
+        - acadyear
+        - semester
+        - coursecode
+        - coursename
+      properties:
+        acadyear:
+          type: string
+          description: Academic year used for the query.
+          example: "2569"
+        semester:
+          type: string
+          description: Semester used for the query.
+          example: "2"
+        coursecode:
+          type: string
+          description: Course-code search text after trimming whitespace.
+          example: "ENG392001"
+        coursename:
+          type: string
+          description: Course-name search text after trimming whitespace.
+          example: ""
+
+    Course:
+      type: object
+      required:
+        - course_code
+        - version
+        - course_name
+        - teachers
+        - credits
+        - credit_detail
+        - language
+        - level
+        - schedule
+        - group
+        - capacity
+        - enrolled
+        - remaining
+        - status
+        - additional_info
+      properties:
+        course_code:
+          type: string
+          description: Course code, including the space used by the registrar format.
+          example: "ENG39 2001"
+        version:
+          type: string
+          description: Course version number.
+          example: "1"
+        course_name:
+          type: string
+          description: Course name.
+          example: "Example Course"
+        teachers:
+          type: array
+          description: Instructors parsed from the registrar page.
+          items:
+            type: string
+          example:
+            - "Example Teacher"
+        credits:
+          type: number
+          nullable: true
+          description: Course credit value. Can be null when the parser cannot find a numeric credit value.
+          example: 3
+        credit_detail:
+          type: string
+          description: Detailed credit structure, such as 3-0-6.
+          example: "3-0-6"
+        language:
+          type: string
+          description: Course language.
+          example: "English"
+        level:
+          type: string
+          description: Course level.
+          example: "Bachelor"
+        schedule:
+          type: array
+          description: One entry for each class period.
+          items:
+            $ref: '#/components/schemas/Schedule'
+        group:
+          type: string
+          description: Course section/group.
+          example: "1"
+        capacity:
+          type: string
+          description: Maximum class capacity.
+          example: "40"
+        enrolled:
+          type: string
+          description: Number of enrolled students.
+          example: "35"
+        remaining:
+          type: string
+          description: Remaining seats.
+          example: "5"
+        status:
+          type: string
+          description: Registration status shown by the registrar.
+          example: "O"
+        additional_info:
+          type: string
+          description: Additional information parsed from the course details.
+          example: ""
+
+    Schedule:
+      type: object
+      required:
+        - day
+        - start_time
+        - end_time
+        - room
+      properties:
+        day:
+          type: string
+          description: Day abbreviation from the registrar system.
+          example: "We"
+        start_time:
+          type: string
+          description: Start time in HH:MM format.
+          pattern: '^\d{1,2}:\d{2}$'
+          example: "13:00"
+        end_time:
+          type: string
+          description: End time in HH:MM format.
+          pattern: '^\d{1,2}:\d{2}$'
+          example: "15:00"
+        room:
+          type: string
+          description: Room belonging to this schedule period only.
+          example: "B6503-A"
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "Internal server error"
+        detail:
+          type: string
+          description: Additional error information. Present for upstream and unexpected server errors.
+          example: "..."
