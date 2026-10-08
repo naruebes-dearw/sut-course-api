@@ -17,15 +17,24 @@ def clean_text(text):
 
 def extract_course_code_version(text):
     """
-    ตัวอย่าง:
-    ENG39 2001 - 1
-    -> code = ENG39 2001
-    -> version = 1
+    Supported course code formats:
+
+    ENGxx xxxx
+    Example:
+        ENG39 2001 - 1
+        -> code = ENG39 2001
+        -> version = 1
+
+    xxxxxx
+    Example:
+        539100 - 1
+        -> code = 539100
+        -> version = 1
     """
     text = clean_text(text)
 
     match = re.search(
-        r"([A-Z]{2,5}\d{1,4}\s+\d{3,6})\s*-\s*(\d+)",
+        r"((?:[A-Z]{3}\d{2}\s\d{4})|(?:\d{6}))\s*-\s*(\d+)",
         text,
     )
 
