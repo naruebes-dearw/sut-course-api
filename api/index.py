@@ -59,6 +59,29 @@ def extract_teachers(td):
     return teachers
 
 
+def extract_course_name(text):
+    """
+    Extract course name from the Registrar course-name cell.
+
+    The course name is normally followed by additional information
+    in parentheses. If no parenthesis is present, use the first Thai
+    character as the boundary before teacher/other Thai text.
+    """
+    text = clean_text(text)
+
+    # Method 1: parenthesis marks the end of the course name.
+    match = re.search(r"\s*\(", text)
+    if match:
+        return text[: match.start()].strip()
+
+    # Method 2: if there is no parenthesis, stop at the first Thai character.
+    match = re.search(r"[ก-๙]", text)
+    if match:
+        return text[: match.start()].strip()
+
+    return text
+
+
 def extract_additional_info(td):
     text = clean_text(td.get_text(" ", strip=True))
     match = re.search(r"\(.*?\)", text)
@@ -153,8 +176,9 @@ def parse_courses(html):
         if not course_code:
             continue
 
-        course_name = clean_text(tds[2].get_text(" ", strip=True))
-        course_name = re.sub(r"\s*\(.*$", "", course_name).strip()
+        course_name = extract_course_name(
+            tds[2].get_text(" ", strip=True)
+        )
         teachers = extract_teachers(tds[2])
         additional_info = extract_additional_info(tds[2])
 
